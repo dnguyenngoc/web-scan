@@ -1,0 +1,64 @@
+item {
+    id: 1
+    name: 'name'
+}
+
+item {
+    id: 2
+    name: 'birth'
+}
+
+item {
+    id: 3
+    name: 'gender'
+}
+
+item {
+    id: 4
+    name: 'nation'
+}
+
+item {
+    id: 5
+    name: 'country'
+}
+
+item {
+    id: 6
+    name: 'id'
+}
+
+item {
+    id: 7
+    name: 'add'
+}
+
+item {
+    id: 8
+    name: 'come_time'
+}
+
+item {
+    id: 9
+    name: 'out_time'
+}
+
+item {
+    id: 10
+    name: 'diagnostic'
+}
+
+item {
+    id: 11
+    name: 'solution'
+}
+
+item {
+    id: 12
+    name: 'note'
+}
+
+item {
+    id: 13
+    name: 'job'
+}

@@ -1,5 +1,16 @@
 import numpy as np
 import cv2
+from PIL import Image
+
+
+def read_image_file(file) -> Image.Image:
+    image = Image.open(BytesIO(file))
+    return image
+
+
+def read_image_from_dir(path) -> Image.Image:
+    image = Image.open(path)
+    return image
 
 
 def get_center_point(coordinate_dict):

@@ -1,6 +1,6 @@
 from detector import Detector
 from recognition import TextRecognition
-from utils.image_utils import align_image, sort_text
+from helpers.image_utils import align_image, sort_text
 import cv2
 import time
 import numpy as np
@@ -16,10 +16,10 @@ class CompletedModel(object):
                                              path_to_labels='./models/identity_card/label_map.pbtxt',
                                              nms_threshold=0.2, score_threshold=0.2)
         self.text_detection_discharge = Detector(path_to_model='./models/discharge_record/model.tflite',
-                                             path_to_labels='./config_text_detection_giay_ra_vien/label_map.pbtxt',
+                                             path_to_labels='./models/discharge_record/label_map.pbtxt',
                                              nms_threshold=0.2, score_threshold=0.2)
         
-        self.text_recognition_model = TextRecognition(path_to_checkpoint='./config_text_recognition/transformerocr.pth')
+        self.text_recognition_model = TextRecognition(path_to_checkpoint='./models/text_recogintion/transformerocr.pth')
 
     
     def detect_corner(self, image):
