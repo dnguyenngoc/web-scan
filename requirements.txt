@@ -1,0 +1,6 @@
+vietocr
+torch
+pillow
+tensorflow
+matplotlib
+torchvision
