@@ -1,25 +1,43 @@
 from detector import Detector
+
+from detector import DetectorDischargeRecord
+
 from recognition import TextRecognition
 from helpers.image_utils import align_image, sort_text
+from helpers import load_label_map
 import cv2
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from helpers import corner_utils
+from helpers import ocr_helpers
+from PIL import Image
 
 
 class CompletedModel(object):
     def __init__(self):
-        self.corner_detection_model = Detector(path_to_model='./models/corner/model.tflite',
-                                               path_to_labels='./models/corner/label_map.pbtxt',
+        self.corner_detection_model = Detector(path_to_model='./models/identity_corner/model.tflite',
+                                               path_to_labels='./models/identity_corner/label_map.pbtxt',
                                                nms_threshold=0.2, score_threshold=0.3)
         self.text_detection_model = Detector(path_to_model='./models/identity_card/model.tflite',
                                              path_to_labels='./models/identity_card/label_map.pbtxt',
                                              nms_threshold=0.2, score_threshold=0.2)
-        self.text_detection_discharge = Detector(path_to_model='./models/discharge_record/model.tflite',
-                                             path_to_labels='./models/discharge_record/label_map.pbtxt',
-                                             nms_threshold=0.2, score_threshold=0.2)
-        
+#         self.text_detection_discharge = Detector(path_to_model='./models/discharge_record/model.tflite',
+#                                              path_to_labels='./models/discharge_record/label_map.pbtxt',
+#                                              nms_threshold=0.1, score_threshold=0.1)
+        self.text_detection_discharge = DetectorDischargeRecord()
         self.text_recognition_model = TextRecognition(path_to_checkpoint='./models/text_recogintion/transformerocr.pth')
+    
+    
+    def get_corner_of_discharge_record(self, img):
+        edges_image = corner_utils.edges_det(img)
+        edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
+        page_contour =  corner_utils.find_page_contours(edges_image)
+        page_contour =  corner_utils.four_corners_sort(page_contour)
+        crop_image = corner_utils.persp_transform(img, page_contour)
+        image = ocr_helpers.resize(crop_image)
+        image = np.asarray(image)
+        return image
 
     
     def detect_corner(self, image):
@@ -92,86 +110,103 @@ class CompletedModel(object):
     
     
     def predict_cmnd(self, image):
-        cropped_image = image #self.detect_corner(image)
+        cropped_image =  self.detect_corner(image)
         id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes = self.detect_text_cmnd(cropped_image)
         result = self.text_recognition_cmnd(cropped_image, id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes)
         return result
     
     
-    def detect_text_giay_ra_vien(self, image):
-        name_boxes, birth_boxes, sex_boxes, nation_boxes, country_boxes, id_boxes, add_boxes, come_time_boxes, \
-        out_time_boxes, diagnostic_boxes, solution_boxes, note_boxes = \
-        (None, None, None, None, None, None, None, None, None, None, None, None)
-        
-        h,w = image.shape[0:2] 
-        name_boxes = [[165, 0, 190, 500]] # temp
-        birth_boxes = [[165, 600, 205, 1200]] # temp
-        sex_boxes = [[165, 600, 205, 1200]] # temp
-        nation_boxes = [[210, 0, 250, 300]] # temp
-        country_boxes = [[165, 273, 189,500]] # temp
-        id_boxes = [[165, 273, 190, 500]] # temp
-        add_boxes = [[165, 273, 190, 500]] # temp
-        come_time_boxes = [[165, 273, 190, 500]] # temp
-        out_time_boxes = [[165, 273, 190, 500]] # temp
-        diagnostic_boxes = [[165, 273, 190, 500]] # temp
-        solution_boxes = [[165, 273, 190, 500]] # temp
-        note_boxes = [[165, 273, 190, 500]] # temp
-        return name_boxes, birth_boxes, sex_boxes, nation_boxes, country_boxes, id_boxes, add_boxes, come_time_boxes, \
-        out_time_boxes, diagnostic_boxes, solution_boxes, note_boxes
-    
-    
-    def text_recognition_giay_ra_vien(self, image, name_boxes, birth_boxes, sex_boxes, nation_boxes, country_boxes, \
-        id_boxes, add_boxes, come_time_boxes, out_time_boxes, diagnostic_boxes, solution_boxes, note_boxes):
-        
-        def crop_and_recog(boxes):
-            crop = []
-            if len(boxes) == 1:
-                ymin, xmin, ymax, xmax = boxes[0]
-                crop.append(image[ymin:ymax, xmin:xmax])
-            else:
-                for box in boxes:
-                    ymin, xmin, ymax, xmax = box
-                    crop.append(image[ymin:ymax, xmin:xmax])
-            plt.imshow(image[ymin:ymax, xmin:xmax])
-            plt.show()
-            return crop
-        
-        list_ans = list(crop_and_recog(name_boxes))
-        list_ans.extend(crop_and_recog(birth_boxes))
-#         list_ans.extend(crop_and_recog(sex_boxes))
-        list_ans.extend(crop_and_recog(nation_boxes))
-        list_ans.extend(crop_and_recog(country_boxes))
-        list_ans.extend(crop_and_recog(id_boxes))
-        list_ans.extend(crop_and_recog(add_boxes))
-        list_ans.extend(crop_and_recog(come_time_boxes))
-        list_ans.extend(crop_and_recog(out_time_boxes))
-        list_ans.extend(crop_and_recog(diagnostic_boxes))
-        list_ans.extend(crop_and_recog(solution_boxes))
-        list_ans.extend(crop_and_recog(note_boxes))
-        
-        result = self.text_recognition_model.predict_on_batch(np.array(list_ans))
+    def split_field_discharge_record_2(self, detection_boxes, detection_classes, num_classes, crop_image):
+        im_height, im_width = crop_image.shape[:2]
+        boxes = [[im_height, im_width, 0, 0] for i in range(num_classes)]
+        for i in range(len(detection_classes)):
+            class_id = detection_classes[i]
+            (ymin, xmin, ymax, xmax) = (
+                detection_boxes[i][0] * im_height, 
+                detection_boxes[i][1] * im_width, 
+                detection_boxes[i][2] * im_height, 
+                detection_boxes[i][3] * im_width
+            )
+            if ymin < boxes[class_id -1][0]: boxes[class_id -1][0] = ymin
+            if xmin < boxes[class_id -1][1]: boxes[class_id -1][1] = xmin
+            if ymax > boxes[class_id -1][2]: boxes[class_id -1][2] = ymax
+            if xmax > boxes[class_id -1][3]: boxes[class_id -1][3] = xmax
+        boxes = np.array(boxes).astype(int)
+        if boxes[6][2] > boxes[5][2]: boxes[6][0] = boxes[5][2]
+        if boxes[9][2] > boxes[8][2]: 
+            boxes[9][0] = boxes[8][2]
+            boxes[9][2] = boxes[9][0] + 50*im_height/720
+        if boxes[10][2] > boxes[9][2]: 
+            boxes[10][0] = boxes[9][2]
+            boxes[10][2] = boxes[10][0] + 50*im_height/720
+        return boxes
 
+    # FUCTION FOR SPLIT FIELD
+    def split_field_discharge_record(self, detections, num_classes, crop_image):
+        im_height, im_width = crop_image.shape[:2]
+        boxes = [[im_height, im_width, 0, 0] for i in range(num_classes)]
+        detection_classes = detections['detection_classes']
+        detection_boxes  = detections['detection_boxes']
+        detection_scores  = detections['detection_scores']
+        list_classes = set(detection_classes)
+        list_class_init = set([1,2,3,4,5,6,7,8,9,10,11,12,13])
+        list_ignore = list_class_init - list_classes
+        for i in range(len(detection_classes)):
+            class_id = detection_classes[i]
+            (ymin, xmin, ymax, xmax) = (
+                detection_boxes[i][0] * im_height, 
+                detection_boxes[i][1] * im_width, 
+                detection_boxes[i][2] * im_height, 
+                detection_boxes[i][3] * im_width
+            )
+            if ymin < boxes[class_id -1][0]: boxes[class_id -1][0] = ymin
+            if xmin < boxes[class_id -1][1]: boxes[class_id -1][1] = xmin
+            if ymax > boxes[class_id -1][2]: boxes[class_id -1][2] = ymax
+            if xmax > boxes[class_id -1][3]: boxes[class_id -1][3] = xmax
+        boxes = np.array(boxes).astype(int)
+        if boxes[6][2] > boxes[5][2]: boxes[6][0] = boxes[5][2]
+        if boxes[9][2] > boxes[8][2]: 
+            boxes[9][0] = boxes[8][2]
+            boxes[9][2] = boxes[9][0] + 50*im_height/720
+        if boxes[10][2] > boxes[9][2]: 
+            boxes[10][0] = boxes[9][2]
+            boxes[10][2] = boxes[10][0] + 50*im_height/720
+        return boxes, list_ignore
+
+    
+    def detect_text_discharge_record(self, image):
+        detections = self.text_detection_discharge.predict(image)
+        boxes, list_ignore = self.split_field_discharge_record(detections, 13, image)
+        return boxes, list_ignore
+        
+    
+    
+    def text_recognition_giay_ra_vien(self, boxes, list_ignore, image, category_index):
+        def crop_and_recog(boxes):
+            end = image[boxes[0]:boxes[2], boxes[1]:boxes[3]]
+#             ocr_helpers.implt(end)
+            return end
+        list_ans = []
+        list_class = []
+        for i in range(len(boxes)):
+            box = boxes[i]
+            class_id = i+1
+            if class_id in list_ignore:
+                list_ignore.remove(class_id)
+                continue
+            list_ans.append(crop_and_recog(box))
+            list_class.append(class_id)
+        result = self.text_recognition_model.predict_on_batch(np.array(list_ans))
         field_dict = dict()
-        field_dict['name'] = result[0].split(': ')[1]
-        b_and_s = result[1].split('-')
-        field_dict['birth'] = b_and_s[0].split(' ')[1]
-        field_dict['sex'] = b_and_s[1].split(': ')[1]
-#         field_dict['nation'] = result[3]
-#         field_dict['country_boxes'] = result[4]
-#         field_dict['id'] = result[5]
-#         field_dict['add'] = result[6]
-#         field_dict['come_time'] = result[7]
-#         field_dict['out_time'] = result[8]
-#         field_dict['diagnostic'] = result[9]
-#         field_dict['solution'] = result[10]
-#         field_dict['note'] = result[11]
+        for i in range(len(result)):
+            field_dict[category_index[list_class[i]]['name']] = result[i]
         return field_dict
 
     
     def predict_giay_ra_vien(self, image):
-        name_boxes, birth_boxes, sex_boxes, nation_boxes, country_boxes, id_boxes, add_boxes, come_time_boxes, \
-        out_time_boxes, diagnostic_boxes, solution_boxes, note_boxes = self.detect_text_giay_ra_vien(image)
-        result = self.text_recognition_giay_ra_vien(image, name_boxes, birth_boxes, sex_boxes, nation_boxes, \
-                                           country_boxes, id_boxes, add_boxes, come_time_boxes, out_time_boxes, \
-                                           diagnostic_boxes, solution_boxes, note_boxes)
+        path_to_lables = '/home/pot/Desktop/web-scan/models/discharge_record/ssd_mobilenet_v2_320x320_07_04_2021/label_map.pbtxt'
+        crop_image = self.get_corner_of_discharge_record(image)
+        boxes, list_ignore = self.detect_text_discharge_record(image)
+        category_index = load_label_map.create_category_index_from_labelmap(path_to_lables, use_display_name=True)
+        result = self.text_recognition_giay_ra_vien(boxes, list_ignore, crop_image, category_index)
         return result

@@ -1,9 +1,70 @@
 import numpy as np
 import tensorflow as tf
 import cv2
-from utils import load_label_map
-from utils.image_utils import non_max_suppression_fast
+from helpers import load_label_map
+from helpers.image_utils import non_max_suppression_fast
 
+import pathlib
+import tensorflow.compat.v2 as tf2
+import cv2
+import argparse
+import time
+import numpy as np
+from PIL import Image
+import matplotlib.pyplot as plt
+import warnings
+# from object_detection.utils import label_map_util
+from object_detection.utils import visualization_utils as viz_utils
+from helpers import corner_utils, ocr_helpers
+
+
+class DetectorDischargeRecord(object):
+    def __init__(
+        self, 
+        path_to_model = '/home/pot/Desktop/web-scan/models/discharge_record/ssd_mobilenet_v2_320x320_07_04_2021',
+        path_to_labels= '/home/pot/Desktop/web-scan/models/discharge_record/ssd_mobilenet_v2_320x320_07_04_2021/label_map.pbtxt', 
+        nms_threshold=0.15, 
+        score_threshold=0.3,
+        num_classes = 13
+    ):
+        self.path_to_model = path_to_model
+        self.path_to_labels = path_to_labels
+        self.category_index = load_label_map.create_category_index_from_labelmap(path_to_labels, use_display_name=True)
+        self.nms_threshold = nms_threshold
+        self.score_threshold = score_threshold
+        self.path_to_saved_model = self.path_to_model + "/saved_model"
+        self.detect_fn = self.load_model()
+        self.num_classes = num_classes
+    
+    def load_model(self):
+        detect_fn = tf2.saved_model.load(self.path_to_saved_model)
+        return detect_fn
+    
+    def predict(self, image):
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_expanded = np.expand_dims(image_rgb, axis=0)
+
+        # The input needs to be a tensor, convert it using `tf.convert_to_tensor`.
+        input_tensor = tf2.convert_to_tensor(image)
+        # The model expects a batch of images, so add an axis with `tf.newaxis`.
+        input_tensor = input_tensor[tf2.newaxis, ...]
+
+        # input_tensor = np.expand_dims(image_np, 0)
+        detections = self.detect_fn(input_tensor)
+
+        # All outputs are batches tensors.
+        # Convert to numpy arrays, and take index [0] to remove the batch dimension.
+        # We're only interested in the first num_detections.
+        num_detections = int(detections.pop('num_detections'))
+        detections = {key: value[0, :num_detections].numpy()
+                       for key, value in detections.items()}
+        detections['num_detections'] = num_detections
+        detections['detection_classes'] = detections['detection_classes'].astype(np.int64)
+        
+        return detections
+
+
+        
 
 class Detector(object):
     def __init__(self, path_to_model, path_to_labels, nms_threshold=0.15, score_threshold=0.3):
@@ -30,7 +91,7 @@ class Detector(object):
         interpreter.allocate_tensors()
 
         return interpreter
-
+    
     def predict(self, img):
         original = img
         height = self.input_details[0]['shape'][1]

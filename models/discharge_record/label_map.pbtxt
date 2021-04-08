@@ -5,7 +5,7 @@ item {
 
 item {
     id: 2
-    name: 'birth'
+    name: 'age'
 }
 
 item {
@@ -25,22 +25,22 @@ item {
 
 item {
     id: 6
-    name: 'id'
+    name: 'insurance_no'
 }
 
 item {
     id: 7
-    name: 'add'
+    name: 'address'
 }
 
 item {
     id: 8
-    name: 'come_time'
+    name: 'admission_date'
 }
 
 item {
     id: 9
-    name: 'out_time'
+    name: 'discharge_date'
 }
 
 item {

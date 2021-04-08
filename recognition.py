@@ -15,14 +15,14 @@ class TextRecognition(object):
         url_config_vgg_transformers = '1TF8effeufpgkHqQFlmNWKsQtCMfDiooa'
 
         # load base config
-        if os.path.isfile('./config_text_recognition/base.yml'):
-            base_config = self.read_from_config(file_yml='./models/transformer/base.yml')
+        if os.path.isfile('./models/text_recogintion/base.yml'):
+            base_config = self.read_from_config(file_yml='./models/text_recogintion/base.yml')
         else:
             base_config = self.download_config(url_base)
 
         # load vgg transformer config
-        if os.path.isfile('./models/transformer/vgg-transformer.yml'):
-            config = self.read_from_config(file_yml='./models/transformer/vgg-transformer.yml')
+        if os.path.isfile('./models/text_recogintion/vgg-transformer.yml'):
+            config = self.read_from_config(file_yml='./models/text_recogintion/vgg-transformer.yml')
         else:
             config = self.download_config(url_config_vgg_transformers)
 

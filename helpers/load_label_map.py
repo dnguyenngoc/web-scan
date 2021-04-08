@@ -1,7 +1,7 @@
 import tensorflow as tf
 import logging
 from google.protobuf import text_format
-from utils import string_int_label_map_pb2
+from helpers import string_int_label_map_pb2
 
 
 def _validate_label_map(label_map):

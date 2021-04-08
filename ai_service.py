@@ -1,7 +1,7 @@
 from io import BytesIO
 import numpy as np
 from merged_model import CompletedModel
-
+from PIL import Image
 
 model = None
 

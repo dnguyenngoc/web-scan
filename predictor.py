@@ -74,6 +74,7 @@ class Predictor(object):
         param: image: ndarray of image
         """
         h, w, _ = image.shape
+        
         new_w, image_height = self.resize_v1(w, h, self.config['dataset']['image_height'],
                                              self.config['dataset']['image_min_width'],
                                              self.config['dataset']['image_max_width'])
