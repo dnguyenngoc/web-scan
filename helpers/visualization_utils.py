@@ -38,9 +38,9 @@ from six.moves import range
 from six.moves import zip
 import tensorflow.compat.v1 as tf
 
-from helpers.core import keypoint_ops
-from helpers.core import standard_fields as fields
-from helpers.utils import shape_utils
+from helpers import keypoint_ops
+from helpers import standard_fields as fields
+from helpers import shape_utils
 
 _TITLE_LEFT_MARGIN = 10
 _TITLE_TOP_MARGIN = 10
