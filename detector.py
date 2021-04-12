@@ -1,11 +1,8 @@
-import numpy as np
-import tensorflow as tf
-import cv2
-from helpers import load_label_map
-from helpers.image_utils import non_max_suppression_fast
+"""@Author by Duy Nguyen Ngoc - email: duynguyenngoc@hotmail.com/duynn_1@digi-texx.vn"""
 
+
+import numpy as np
 import pathlib
-import tensorflow.compat.v2 as tf2
 import cv2
 import argparse
 import time
@@ -13,31 +10,47 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import warnings
-# from object_detection.utils import label_map_util
-from object_detection.utils import visualization_utils as viz_utils
+import tensorflow.compat.v2 as tf
+from helpers.image_utils import non_max_suppression_fast
+from helpers import visualization_utils as viz_utils
 from helpers import corner_utils, ocr_helpers
+from helpers import load_label_map
 
 
-class DetectorDischargeRecord(object):
+
+class DetectorTF2(object):
+    """Load model with tensorflow version from >= 2.0.0 
+        
+        @Param: path_to_model=path to your folder contains tensorflow models
+        @Param: path_to_lables=path to file label_map.pbtxt
+        @Param: score_threshold
+        @Param: num_classes=number class of models
+        
+        @Response: {load_model} load tensorflow to backgroud system
+        @Response: {predict} dict of [num_detections, detection_classes, score_detections]
+        
+    """ 
+    
     def __init__(
         self, 
-        path_to_model = '/home/pot/Desktop/web-scan/models/discharge_record/ssd_mobilenet_v2_320x320_07_04_2021',
-        path_to_labels= '/home/pot/Desktop/web-scan/models/discharge_record/ssd_mobilenet_v2_320x320_07_04_2021/label_map.pbtxt', 
+        path_to_model,
+        path_to_labels, 
         nms_threshold=0.15, 
         score_threshold=0.3,
         num_classes = 13
     ):
         self.path_to_model = path_to_model
         self.path_to_labels = path_to_labels
-        self.category_index = load_label_map.create_category_index_from_labelmap(path_to_labels, use_display_name=True)
         self.nms_threshold = nms_threshold
         self.score_threshold = score_threshold
+        self.num_classes = num_classes
+        self.category_index = load_label_map.create_category_index_from_labelmap(
+            path_to_labels, use_display_name=True)
         self.path_to_saved_model = self.path_to_model + "/saved_model"
         self.detect_fn = self.load_model()
-        self.num_classes = num_classes
     
     def load_model(self):
-        detect_fn = tf2.saved_model.load(self.path_to_saved_model)
+        detect_fn = tf.saved_model.load(self.path_to_saved_model)
         return detect_fn
     
     def predict(self, image):
@@ -45,9 +58,10 @@ class DetectorDischargeRecord(object):
         image_expanded = np.expand_dims(image_rgb, axis=0)
 
         # The input needs to be a tensor, convert it using `tf.convert_to_tensor`.
-        input_tensor = tf2.convert_to_tensor(image)
+        input_tensor = tf.convert_to_tensor(image)
+        
         # The model expects a batch of images, so add an axis with `tf.newaxis`.
-        input_tensor = input_tensor[tf2.newaxis, ...]
+        input_tensor = input_tensor[tf.newaxis, ...]
 
         # input_tensor = np.expand_dims(image_np, 0)
         detections = self.detect_fn(input_tensor)
@@ -63,14 +77,26 @@ class DetectorDischargeRecord(object):
         
         return detections
 
-
         
 
 class Detector(object):
+    """Load model with tensorflow LITE version from >= 2.0.0 
+        
+        @Param: path_to_model=path to your folder contains tensorflow models
+        @Param: path_to_lables=path to file label_map.pbtxt
+        @Param: score_threshold
+        @Param: num_classes=number class of models
+        
+        @Response: {load_model} load tensorflow to backgroud system
+        @Response: {predict} dict of [num_detections, detection_classes, score_detections]
+        @Response: {draw} draw boding box of object to origin image
+    """
+    
     def __init__(self, path_to_model, path_to_labels, nms_threshold=0.15, score_threshold=0.3):
         self.path_to_model = path_to_model
         self.path_to_labels = path_to_labels
-        self.category_index = load_label_map.create_category_index_from_labelmap(path_to_labels, use_display_name=True)
+        self.category_index = load_label_map.create_category_index_from_labelmap(
+            path_to_labels, use_display_name=True)
         self.nms_threshold = nms_threshold
         self.score_threshold = score_threshold
 
@@ -134,6 +160,7 @@ class Detector(object):
                                                                                 overlapThresh=self.nms_threshold)
         return self.detection_boxes, np.array(self.detection_classes).astype("int"), self.category_index
 
+    
     def draw(self, image):
         self.detection_boxes, self.detection_classes, self.category_index = self.predict(image)
         height, width, _ = image.shape

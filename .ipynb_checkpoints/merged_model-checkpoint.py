@@ -1,17 +1,20 @@
-from detector import Detector
+"""@Author by Duy Nguyen Ngoc - email: duynguyenngoc@hotmail.com/duynn_1@digi-texx.vn"""
 
-from detector import DetectorDischargeRecord
 
-from recognition import TextRecognition
-from helpers.image_utils import align_image, sort_text
-from helpers import load_label_map
 import cv2
 import time
 import numpy as np
+from PIL import Image
 import matplotlib.pyplot as plt
+
+from detector import Detector
+from detector import DetectorTF2
+from recognition import TextRecognition
+
 from helpers import corner_utils
 from helpers import ocr_helpers
-from PIL import Image
+from helpers.image_utils import align_image, sort_text
+from helpers import load_label_map
 
 
 class CompletedModel(object):
@@ -22,10 +25,9 @@ class CompletedModel(object):
         self.text_detection_model = Detector(path_to_model='./models/identity_card/model.tflite',
                                              path_to_labels='./models/identity_card/label_map.pbtxt',
                                              nms_threshold=0.2, score_threshold=0.2)
-#         self.text_detection_discharge = Detector(path_to_model='./models/discharge_record/model.tflite',
-#                                              path_to_labels='./models/discharge_record/label_map.pbtxt',
-#                                              nms_threshold=0.1, score_threshold=0.1)
-        self.text_detection_discharge = DetectorDischargeRecord()
+        self.text_detection_discharge = DetectorTF2(path_to_model='./models/discharge_record',
+                                                    path_to_labels='./models/discharge_record/label_map.pbtxt',
+                                                    nms_threshold=0.33, score_threshold=0.33)
         self.text_recognition_model = TextRecognition(path_to_checkpoint='./models/text_recogintion/transformerocr.pth')
     
     
@@ -116,40 +118,39 @@ class CompletedModel(object):
         return result
     
     
-    def split_field_discharge_record_2(self, detection_boxes, detection_classes, num_classes, crop_image):
-        im_height, im_width = crop_image.shape[:2]
-        boxes = [[im_height, im_width, 0, 0] for i in range(num_classes)]
-        for i in range(len(detection_classes)):
-            class_id = detection_classes[i]
-            (ymin, xmin, ymax, xmax) = (
-                detection_boxes[i][0] * im_height, 
-                detection_boxes[i][1] * im_width, 
-                detection_boxes[i][2] * im_height, 
-                detection_boxes[i][3] * im_width
-            )
-            if ymin < boxes[class_id -1][0]: boxes[class_id -1][0] = ymin
-            if xmin < boxes[class_id -1][1]: boxes[class_id -1][1] = xmin
-            if ymax > boxes[class_id -1][2]: boxes[class_id -1][2] = ymax
-            if xmax > boxes[class_id -1][3]: boxes[class_id -1][3] = xmax
-        boxes = np.array(boxes).astype(int)
-        if boxes[6][2] > boxes[5][2]: boxes[6][0] = boxes[5][2]
-        if boxes[9][2] > boxes[8][2]: 
-            boxes[9][0] = boxes[8][2]
-            boxes[9][2] = boxes[9][0] + 50*im_height/720
-        if boxes[10][2] > boxes[9][2]: 
-            boxes[10][0] = boxes[9][2]
-            boxes[10][2] = boxes[10][0] + 50*im_height/720
-        return boxes
+#     def split_field_discharge_record_2(self, detection_boxes, detection_classes, num_classes, crop_image):
+#         im_height, im_width = crop_image.shape[:2]
+#         boxes = [[im_height, im_width, 0, 0] for i in range(num_classes)]
+#         for i in range(len(detection_classes)):
+#             class_id = detection_classes[i]
+#             (ymin, xmin, ymax, xmax) = (
+#                 detection_boxes[i][0] * im_height, 
+#                 detection_boxes[i][1] * im_width, 
+#                 detection_boxes[i][2] * im_height, 
+#                 detection_boxes[i][3] * im_width
+#             )
+#             if ymin < boxes[class_id -1][0]: boxes[class_id -1][0] = ymin
+#             if xmin < boxes[class_id -1][1]: boxes[class_id -1][1] = xmin
+#             if ymax > boxes[class_id -1][2]: boxes[class_id -1][2] = ymax
+#             if xmax > boxes[class_id -1][3]: boxes[class_id -1][3] = xmax
+#         boxes = np.array(boxes).astype(int)
+#         if boxes[6][2] > boxes[5][2]: boxes[6][0] = boxes[5][2]
+#         if boxes[9][2] > boxes[8][2]: 
+#             boxes[9][0] = boxes[8][2]
+#             boxes[9][2] = boxes[9][0] + 50*im_height/720
+#         if boxes[10][2] > boxes[9][2]: 
+#             boxes[10][0] = boxes[9][2]
+#             boxes[10][2] = boxes[10][0] + 50*im_height/720
+#         return boxes
 
     # FUCTION FOR SPLIT FIELD
-    def split_field_discharge_record(self, detections, num_classes, crop_image):
+    def split_field_discharge_record(self, detections, list_class_init, num_classes, crop_image):
         im_height, im_width = crop_image.shape[:2]
         boxes = [[im_height, im_width, 0, 0] for i in range(num_classes)]
         detection_classes = detections['detection_classes']
         detection_boxes  = detections['detection_boxes']
         detection_scores  = detections['detection_scores']
         list_classes = set(detection_classes)
-        list_class_init = set([1,2,3,4,5,6,7,8,9,10,11,12,13])
         list_ignore = list_class_init - list_classes
         for i in range(len(detection_classes)):
             class_id = detection_classes[i]
@@ -174,17 +175,15 @@ class CompletedModel(object):
         return boxes, list_ignore
 
     
-    def detect_text_discharge_record(self, image):
+    def detect_text_discharge_record(self, image, num_classes, list_class_init):
         detections = self.text_detection_discharge.predict(image)
-        boxes, list_ignore = self.split_field_discharge_record(detections, 13, image)
+        boxes, list_ignore = self.split_field_discharge_record(detections, list_class_init, num_classes, image)
         return boxes, list_ignore
         
-    
     
     def text_recognition_giay_ra_vien(self, boxes, list_ignore, image, category_index):
         def crop_and_recog(boxes):
             end = image[boxes[0]:boxes[2], boxes[1]:boxes[3]]
-#             ocr_helpers.implt(end)
             return end
         list_ans = []
         list_class = []
@@ -204,9 +203,11 @@ class CompletedModel(object):
 
     
     def predict_giay_ra_vien(self, image):
-        path_to_lables = '/home/pot/Desktop/web-scan/models/discharge_record/ssd_mobilenet_v2_320x320_07_04_2021/label_map.pbtxt'
+        path_to_labels = self.text_detection_discharge.path_to_labels
+        category_index = load_label_map.create_category_index_from_labelmap(path_to_labels, use_display_name=True)
+        list_class_init = set(list(category_index.keys()))
+        num_classes = len(category_index)
         crop_image = self.get_corner_of_discharge_record(image)
-        boxes, list_ignore = self.detect_text_discharge_record(image)
-        category_index = load_label_map.create_category_index_from_labelmap(path_to_lables, use_display_name=True)
+        boxes, list_ignore = self.detect_text_discharge_record(image, num_classes, list_class_init)
         result = self.text_recognition_giay_ra_vien(boxes, list_ignore, crop_image, category_index)
         return result

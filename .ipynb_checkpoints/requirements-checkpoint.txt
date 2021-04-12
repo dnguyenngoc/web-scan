@@ -1,6 +1,5 @@
 vietocr==0.3.5
-torchvision==0.9.1
 uvicorn==0.13.4
-fast_api==0.63.0
-gdown==3.12.2
+fastapi==0.63.0
+gdown==3.11.0
 python-multipart==0.0.5
