@@ -1,6 +1,6 @@
 from io import BytesIO
 import numpy as np
-from merged_model import CompletedModel
+from merged_model_discharge_record import CompletedModel
 from PIL import Image
 
 model = None
