@@ -36,11 +36,14 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
     for j in range(len(list_class)):
         image = list_ans[j]
         image = Image.fromarray(image)
-        image.save(path + '1_' + list_class[j] + '.png')
+        image.save(path + '1_' + category_index[list_class[j]['name']] + '.png')
         obj = {
             'id': 1,
             'data': {
-                'image_url': path+list_class[j]+'.png', 'class_name': list_class[j], 'class_id': j
+                'image_path': path+'1_'+list_class[j]+'.png', 
+                'class_name': list_class[j], 
+                'class_id': j,
+                'real_image_url': 'http://10.1.33.80:8888/images/1_' +  category_index[list_class[j]['name']] + '.png'
             } 
         }
         end.append(obj)
@@ -56,6 +59,10 @@ async def result(field_name: str = 'name'):
     path = './test_data/tmp/discharge_record/' + id + '_' + field_name + '.png'
     return StreamingResponse(open(path, 'rb'), media_type="image/png")
     
-    
+@app.get('/images/{name}')
+async def result(name: str):
+    path = './test_data/tmp/discharge_record/' + name + '.png'
+    return StreamingResponse(open(path, 'rb'), media_type="image/png")
+
 if __name__ == "__main__":
     uvicorn.run(app, host='0.0.0.0',port=8080,debug=True)
