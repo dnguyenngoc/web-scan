@@ -3,9 +3,6 @@ import numpy as np
 from merged_model_discharge_record import CompletedModel
 from PIL import Image
 
-model = load_model()
-
-
 def load_model():
     print("Model loading.....")
     model = CompletedModel()
@@ -30,3 +27,4 @@ def predict_discharge_record(image: Image.Image):
     result = model.predict_giay_ra_vien(img)
     return result
 
+model = load_model()
