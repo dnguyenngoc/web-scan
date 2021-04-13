@@ -16,10 +16,32 @@ app_desc = """<h2>Try this app by uploading any image with `predict/image`</h2>"
 app = FastAPI(title="Tensorflow FastAPI", description=app_desc)
 
 
-@app.get("/", include_in_schema=False)
-async def index():
-    return RedirectResponse(url="/docs")
+# @app.get("/docs", include_in_schema=False)
+# async def index():
+#     return RedirectResponse(url="/files")
 
+
+@app.post("/upload-files/")
+async def create_upload_files(files: List[UploadFile] = File(...)):
+    return {"filenames": [file.filename for file in files]}
+
+
+@app.get("/")
+async def main():
+    content = """
+        <body>
+        <form action="/files/" enctype="multipart/form-data" method="post">
+        <input name="files" type="file" multiple>
+        <input type="submit">
+        </form>
+        <form action="/uploadfiles/" enctype="multipart/form-data" method="post">
+        <input name="files" type="file" multiple>
+        <input type="submit">
+        </form>
+        </body>
+    """
+    return HTMLResponse(content=content)
+    
 
 @app.post("/predict")
 async def predict_api(file: UploadFile = File(...), type_predict: str= 'detection'):
@@ -41,10 +63,10 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
         obj = {
             'session_id': 1,
             'data': {
-                'image_path': path+'1_'+str(category_index[class_id]['name'])+'.png', 
                 'class_name': str(category_index[class_id]['name']), 
                 'class_id': class_id,
-                'real_image_url': 'http://10.1.33.76:8080/images/1_' +  str(category_index[class_id]['name']) + '.png'
+                'image_path': path+'1_'+str(category_index[class_id]['name'])+'.png', 
+                'image_url': 'http://10.1.33.76:8080/images/1_' +  str(category_index[class_id]['name']) + '.png'
             } 
         }
         end.append(obj)
