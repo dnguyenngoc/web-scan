@@ -3,7 +3,7 @@ import numpy as np
 from merged_model_discharge_record import CompletedModel
 from PIL import Image
 
-model = None
+model = load_model()
 
 
 def load_model():
