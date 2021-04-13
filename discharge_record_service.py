@@ -56,7 +56,7 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
         return 'improve here'
     
 @app.get('/result/{session_id}')
-async def result(field_name: str = 'name', session_id: str):
+async def result( session_id: str, field_name: str):
     path = './test_data/tmp/discharge_record/' + session_id + '_' + field_name + '.png'
     return StreamingResponse(open(path, 'rb'), media_type="image/png")
     
