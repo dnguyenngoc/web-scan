@@ -36,14 +36,14 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
     for j in range(len(list_class)):
         image = list_ans[j]
         image = Image.fromarray(image)
-        image.save(path + '1_' + category_index[list_class[j]['name']] + '.png')
+        image.save(path + '1_' + str(category_index[list_class[j]]['name']) + '.png')
         obj = {
             'id': 1,
             'data': {
                 'image_path': path+'1_'+list_class[j]+'.png', 
                 'class_name': list_class[j], 
                 'class_id': j,
-                'real_image_url': 'http://10.1.33.80:8888/images/1_' +  category_index[list_class[j]['name']] + '.png'
+                'real_image_url': 'http://10.1.33.80:8888/images/1_' +  str(category_index[list_class[j]]['name']) + '.png'
             } 
         }
         end.append(obj)
