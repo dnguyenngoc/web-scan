@@ -10,6 +10,7 @@ from io import BytesIO
 import numpy as np
 import os
 import glob
+from typing import List
 
 
 app_desc = """<h2>Try this app by uploading any image with `predict/image`</h2>"""
