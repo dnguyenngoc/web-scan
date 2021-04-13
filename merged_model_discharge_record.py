@@ -69,10 +69,10 @@ class CompletedModel(object):
         boxes = np.array(boxes).astype(int)
         if boxes[6][2] > boxes[5][2] and boxes[5][2] != im_height: 
             boxes[6][0] = boxes[5][2]
-        if boxes[9][2] > boxes[8][2] and boxes[8][2] != im_heigh: 
+        if boxes[9][2] > boxes[8][2] and boxes[8][2] != im_height: 
             boxes[9][0] = boxes[8][2]
             boxes[9][2] = boxes[9][0] + 50*im_height/720
-        if boxes[10][2] > boxes[9][2] and  boxes[9][2] != im_heigh: 
+        if boxes[10][2] > boxes[9][2] and  boxes[9][2] != im_height: 
             boxes[10][0] = boxes[9][2]
             boxes[10][2] = boxes[10][0] + 50*im_height/720
         return boxes, list_ignore
