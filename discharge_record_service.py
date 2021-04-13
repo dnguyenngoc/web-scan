@@ -34,16 +34,17 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
         os.remove(f)
     end = []
     for j in range(len(list_class)):
+        class_id = list_class[j]
         image = list_ans[j]
         image = Image.fromarray(image)
-        image.save(path + '1_' + str(category_index[list_class[j]]['name']) + '.png')
+        image.save(path + '1_' + str(category_index[class_id]['name']) + '.png')
         obj = {
-            'id': 1,
+            'session_id': 1,
             'data': {
-                'image_path': path+'1_'+str(category_index[list_class[j]]['name'])+'.png', 
-                'class_name': str(category_index[list_class[j]]['name']), 
-                'class_id': j,
-                'real_image_url': 'http://10.1.33.80:8888/images/1_' +  str(category_index[list_class[j]]['name']) + '.png'
+                'image_path': path+'1_'+str(category_index[class_id]['name'])+'.png', 
+                'class_name': str(category_index[class_id]['name']), 
+                'class_id': class_id,
+                'real_image_url': 'http://10.1.33.80:8888/images/1_' +  str(category_index[class_id]['name']) + '.png'
             } 
         }
         end.append(obj)
@@ -54,9 +55,9 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
             image_path = image['image_url']
         return 'improve here'
     
-@app.get('/result/{id}')
+@app.get('/result/{session_id}')
 async def result(field_name: str = 'name'):
-    path = './test_data/tmp/discharge_record/' + id + '_' + field_name + '.png'
+    path = './test_data/tmp/discharge_record/' + session_id + '_' + field_name + '.png'
     return StreamingResponse(open(path, 'rb'), media_type="image/png")
     
 @app.get('/images/{name}')
