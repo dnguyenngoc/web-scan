@@ -21,7 +21,7 @@ app = FastAPI(title="Tensorflow FastAPI", description=app_desc)
 async def index():
     return RedirectResponse(url="/docs")
 
-@app.post("/predict/discharge_record")
+@app.post("/predict")
 async def predict_api(file: UploadFile = File(...), type_predict: str= 'detection'):
     extension = file.filename.split(".")[-1] in ("jpg", "jpeg", "png")
     if not extension:
@@ -33,11 +33,16 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
     for f in files:
         os.remove(f)
     end = []
-    for j in range(len(prediction)):
-        image = prediction[j]
+    for j in range(len(list_class)):
+        image = list_ans[j]
         image = Image.fromarray(image)
-        image.save(path+list_class[j]+'.png')
-        obj = {'image_url': path+list_class[j]+'.png', 'class_name': list_class[j], 'class_id': j}
+        image.save(path + '1_' + list_class[j] + '.png')
+        obj = {
+            'id': 1,
+            'data': {
+                'image_url': path+list_class[j]+'.png', 'class_name': list_class[j], 'class_id': j
+            } 
+        }
         end.append(obj)
     if type_predict == 'detection':
         return end
@@ -45,6 +50,12 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
         for image in end:
             image_path = image['image_url']
         return 'improve here'
+    
+@app.get('/result/{id}')
+async def result(field_name: str = 'name'):
+    path = './test_data/tmp/discharge_record/' + id + '_' + field_name + '.png'
+    return StreamingResponse(open(path, 'rb'), media_type="image/png")
+    
     
 if __name__ == "__main__":
     uvicorn.run(app, host='0.0.0.0',port=8080,debug=True)
