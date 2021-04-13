@@ -13,13 +13,13 @@ import glob
 
 
 app_desc = """<h2>Try this app by uploading any image with `predict/image`</h2>"""
-
 app = FastAPI(title="Tensorflow FastAPI", description=app_desc)
 
 
 @app.get("/", include_in_schema=False)
 async def index():
     return RedirectResponse(url="/docs")
+
 
 @app.post("/predict")
 async def predict_api(file: UploadFile = File(...), type_predict: str= 'detection'):
@@ -55,14 +55,16 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
             image_path = image['image_url']
         return 'improve here'
     
-@app.get('/result/{session_id}')
-async def result( session_id: str, field_name: str):
-    path = './test_data/tmp/discharge_record/' + session_id + '_' + field_name + '.png'
-    return StreamingResponse(open(path, 'rb'), media_type="image/png")
+    
+# @app.get('/result/{session_id}')
+# async def result( session_id: str, field_name: str):
+#     path = './test_data/tmp/discharge_record/' + session_id + '_' + field_name + '.png'
+#     return StreamingResponse(open(path, 'rb'), media_type="image/png")
+    
     
 @app.get('/images/{name}')
-async def result(name: str):
-    path = './test_data/tmp/discharge_record/' + name + '.png'
+async def images(name: str):
+    path = './test_data/tmp/discharge_record/' + name
     return StreamingResponse(open(path, 'rb'), media_type="image/png")
 
 if __name__ == "__main__":
