@@ -39,7 +39,7 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
         image.save(path+list_class[j]+'.png')
         obj = {'image_url': path+list_class[j]+'.png', 'class_name': list_class[j], 'class_id': j}
         end.append(obj)
-    if type_predict == 'detection'
+    if type_predict == 'detection':
         return end
     else:
         for image in end:
