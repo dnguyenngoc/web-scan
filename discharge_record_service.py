@@ -44,7 +44,7 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
                 'image_path': path+'1_'+str(category_index[class_id]['name'])+'.png', 
                 'class_name': str(category_index[class_id]['name']), 
                 'class_id': class_id,
-                'real_image_url': 'http://10.1.33.80:8888/images/1_' +  str(category_index[class_id]['name']) + '.png'
+                'real_image_url': 'http://10.1.33.76:8080/images/1_' +  str(category_index[class_id]['name']) + '.png'
             } 
         }
         end.append(obj)
@@ -56,7 +56,7 @@ async def predict_api(file: UploadFile = File(...), type_predict: str= 'detectio
         return 'improve here'
     
 @app.get('/result/{session_id}')
-async def result(field_name: str = 'name'):
+async def result(field_name: str = 'name', session_id: str):
     path = './test_data/tmp/discharge_record/' + session_id + '_' + field_name + '.png'
     return StreamingResponse(open(path, 'rb'), media_type="image/png")
     

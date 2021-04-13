@@ -33,10 +33,8 @@ class CompletedModel(object):
     
     def detect_corner(self, image):
         detection_boxes, detection_classes, category_index = self.corner_detection_model.predict(image)
-
         coordinate_dict = dict()
         height, width, _ = image.shape
-
         for i in range(len(detection_classes)):
             label = str(category_index[detection_classes[i]]['name'])
             real_ymin = int(max(1, detection_boxes[i][0]))
@@ -44,8 +42,6 @@ class CompletedModel(object):
             real_ymax = int(min(height, detection_boxes[i][2]))
             real_xmax = int(min(width, detection_boxes[i][3]))
             coordinate_dict[label] = (real_xmin, real_ymin, real_xmax, real_ymax)
-
-        # align image
         cropped_img = align_image(image, coordinate_dict)
         return cropped_img
 
@@ -71,13 +67,14 @@ class CompletedModel(object):
             if ymax > boxes[class_id -1][2]: boxes[class_id -1][2] = ymax
             if xmax > boxes[class_id -1][3]: boxes[class_id -1][3] = xmax
         boxes = np.array(boxes).astype(int)
-#         if boxes[6][2] > boxes[5][2]: boxes[6][0] = boxes[5][2]
-#         if boxes[9][2] > boxes[8][2]: 
-#             boxes[9][0] = boxes[8][2]
-#             boxes[9][2] = boxes[9][0] + 50*im_height/720
-#         if boxes[10][2] > boxes[9][2]: 
-#             boxes[10][0] = boxes[9][2]
-#             boxes[10][2] = boxes[10][0] + 50*im_height/720
+        if boxes[6][2] > boxes[5][2] and boxes[5][2] != im_height: 
+            boxes[6][0] = boxes[5][2]
+        if boxes[9][2] > boxes[8][2] and boxes[8][2] != im_heigh: 
+            boxes[9][0] = boxes[8][2]
+            boxes[9][2] = boxes[9][0] + 50*im_height/720
+        if boxes[10][2] > boxes[9][2] and  boxes[9][2] != im_heigh: 
+            boxes[10][0] = boxes[9][2]
+            boxes[10][2] = boxes[10][0] + 50*im_height/720
         return boxes, list_ignore
 
     
