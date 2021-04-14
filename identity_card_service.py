@@ -16,7 +16,7 @@ if __name__ == "__main__":
     ftp = FTP(username = config.FTP_USERNAME, password = config.FTP_PASSWORD, url = config.FTP_URL)
     while True:
         try:
-            process = process_logic.read_by_status_name_and_type_join_load(db_session, 'upload', 'identity_card')
+            process = process_logic.read_by_status_name_and_type_join_load(db_session, 'upload', config.IDENTITY_CARD)
             for item in process:
                 document_id = str(item.document.id)
                 process_id = str(item.id)
@@ -24,7 +24,9 @@ if __name__ == "__main__":
                 list_ans, list_class, category_index = predict_identity_card(open(ftp.load_file(url), 'rb'))
                 for i in range(len(list_class)):
                     crop_image = list_ans[i]
-                    ftp.create_file('/identity_card/{document_id}/{field_name}.png')
+                    ftp.create_file('/{server_type}/{document_id}/{field_name}.png'.format(
+                        server_type = config.IDENTITY_CARD, document_id = document_id, 
+                        field_name = document_id + str(category_index[list_class[i]]['name'])))        
             process_crud.update(
                 db_session, 
                 document_id, 

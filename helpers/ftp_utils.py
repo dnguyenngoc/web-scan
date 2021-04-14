@@ -14,8 +14,7 @@ class FTP:
         file.close() 
         return res
         
-    def create_file(self, path):
-        file = open(path,'wb')     
+    def create_file(self, path, file):
         self.sess.storbinary('STOR ' + path, file)
         file.close()  
     
