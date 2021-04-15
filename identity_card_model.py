@@ -31,7 +31,7 @@ class CompletedModel(object):
         return image
     
     
-     def detect_text_cmnd(self, image):
+    def detect_text_cmnd(self, image):
         id_boxes = None
         name_boxes = None
         birth_boxes = None
