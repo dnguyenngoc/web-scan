@@ -2,4 +2,4 @@ transformerocr.pth
 __pycache__
 .ipynb_checkpoints
 test_data
-
+__init__.py
