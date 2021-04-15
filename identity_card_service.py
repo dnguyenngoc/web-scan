@@ -1,43 +1,113 @@
 import os
-os.chdir('/home/pot/Desktop/web-scan')
+os.chdir('./')
 import time
-from database.db import db_session
-from database.repository_crud import document_crud, process_crud
-from database.repository_logic import document_logic, process_logic
-from database.entities import document_entity, process_entity
 import datetime
-from identity_card_ai_service import predict_identity_card
+from ftplib import FTP
 from pprint import pprint
-from helpers.ftp_utils import FTP
+import ftplib
 from settings import config
+import io
+import urllib.request as urllib2
+from identity_card_model import CompletedModel
+import numpy as np
+from helpers import corner_utils, ocr_helpers
+from PIL import Image
+import cv2
 
 
-if __name__ == "__main__":
-    ftp = FTP(username = config.FTP_USERNAME, password = config.FTP_PASSWORD, url = config.FTP_URL)
-    while True:
-        try:
-            process = process_logic.read_by_status_name_and_type_join_load(db_session, 'upload', config.IDENTITY_CARD)
-            for item in process:
-                document_id = str(item.document.id)
-                process_id = str(item.id)
-                url = item.document.url
-                list_ans, list_class, category_index = predict_identity_card(open(ftp.load_file(url), 'rb'))
-                for i in range(len(list_class)):
-                    crop_image = list_ans[i]
-                    ftp.create_file('/{server_type}/{document_id}/{field_name}.png'.format(
-                        server_type = config.IDENTITY_CARD, document_id = document_id, 
-                        field_name = document_id + str(category_index[list_class[i]]['name'])))        
-            process_crud.update(
-                db_session, 
-                document_id, 
-                {'status_code': 200, 'status_name': 'extract', 'update_date': datetime.datetime.now()}
-            )
-            document_crud.update(
-                db_session, 
-                document_id, 
-                {'export_date': datetime.datetime.now(), 'update_date': datetime.datetime.now()}
-            )   
-        except Excetion as e:
-            print(e)
-        time.sleep(10)
-        
+ftp = FTP()
+ftp.connect(config.FTP_URL)
+ftp.login(config.FTP_USERNAME, config.FTP_PASSWORD)
+
+
+print('load model ...')
+model = CompletedModel()
+print('model is loaded.')
+
+
+def list(path):
+    return ftp.nlst(path)
+
+
+def upload_np_image(np_image, path, file_type):
+    image = Image.fromarray(np_image.astype('uint8'))
+    temp = io.BytesIO()
+    image.save(temp, format=file_type)
+    temp.seek(0)
+    ftp.storbinary('STOR ./{path}'.format(path=path), temp)
+
+
+def read(path):
+    fh = urllib2.urlopen('ftp://{user}:{pw}@{host}/{path}'.format(user = config.FTP_USERNAME, pw=config.FTP_PASSWORD, host=config.FTP_URL, path = path))
+    return fh.read()
+
+
+def move(source, destination):
+    ftp.rename(source, destination)
+
+
+def crop_image(img):
+    img = np.asarray(img)
+    edges_image = corner_utils.edges_det(img)
+    edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
+    page_contour =  corner_utils.find_page_contours(edges_image)
+    page_contour =  corner_utils.four_corners_sort(page_contour)
+    crop_image = corner_utils.persp_transform(img, page_contour)
+    image = ocr_helpers.resize(crop_image)
+    image_end = Image.fromarray(np.uint8(image)).convert('RGB')
+    image_with_detections = image.copy()
+    return image
+
+
+def crop_and_recog(boxes, image):
+    crop = []
+    if len(boxes) == 1:
+        ymin, xmin, ymax, xmax = boxes[0]
+        crop.append(image[ymin:ymax, xmin:xmax])
+    else:
+        for box in boxes:
+            ymin, xmin, ymax, xmax = box
+            crop.append(image[ymin:ymax, xmin:xmax])
+    return crop
+
+
+def handle_detection(name_boxes, img_crop):
+    y_min, x_min, y_max, x_max = (name_boxes[0][0], name_boxes[0][1], name_boxes[0][2], name_boxes[0][3])
+    for item in name_boxes:
+        ymin = item[0]
+        xmin = item[1]
+        ymax = item[2]
+        xmax = item[3]
+        if ymin < y_min: y_min = ymin
+        if xmin < x_min: x_min = xmin
+        if ymax > y_max: y_max = ymax
+        if xmax > x_max: x_max = xmax
+    return img_crop[y_min:y_max, x_min-10:x_max+10]
+
+
+identity_card_import_dir = 'identity_card/import/'
+identity_card_export_dir = 'identity_card/export/'
+
+while True:
+    print('start session ...')
+    imports = list(identity_card_import_dir)
+    for item in imports:
+        image_path = identity_card_import_dir + item
+        image = read(image_path)
+        image = np.array(Image.open(io.BytesIO(image))) 
+        img_crop = crop_image(image)
+        im_height,im_width, _ = img_crop.shape
+        id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes, category_index = model.detect_text_cmnd(img_crop)
+        img_id_boxes = handle_detection(id_boxes, img_crop)
+        upload_np_image(img_id_boxes, identity_card_export_dir +'id_'+ item, 'JPEG')
+        img_name_boxes = handle_detection(name_boxes, img_crop)
+        upload_np_image(img_name_boxes, identity_card_export_dir +'name_'+ item, 'JPEG')
+        img_birth_boxes = handle_detection(birth_boxes, img_crop)
+        upload_np_image(img_birth_boxes, identity_card_export_dir +'birth_'+ item, 'JPEG')
+        img_add_boxes = handle_detection(add_boxes, img_crop)
+        upload_np_image(img_add_boxes, identity_card_export_dir +'add_'+ item, 'JPEG')
+        img_home_boxes = handle_detection(home_boxes, img_crop)
+        upload_np_image(img_home_boxes, identity_card_export_dir +'home_'+ item, 'JPEG')
+        move(image_path, identity_card_export_dir + item)
+    print('sleep 100 second ...') 
+    time.sleep(100)

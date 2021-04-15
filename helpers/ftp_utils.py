@@ -2,11 +2,15 @@ import ftplib
 
 
 class FTP:
-    def __init__(self, url, username, password):
+    def __init__(self, url, username, password, port):
         self.username = username
         self.password = password
         self.url = url
-        self.sess = ftplib.FTP(url,self.username, self.password)
+        self.port = port
+        self.sess = self.connect()
+        
+    def connect(self):
+        self.sess = ftplib.FTP(self.url, self.username, self.password).login()
     
     def load_file(self, path):
         file = open(path,'rb')     
@@ -18,6 +22,6 @@ class FTP:
         self.sess.storbinary('STOR ' + path, file)
         file.close()  
     
-    def close(self)
+    def close(self):
         if self.sess != None:
             self.sess.quit()

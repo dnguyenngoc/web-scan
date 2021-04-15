@@ -9,6 +9,7 @@ IDENTITY_CARD = 'identity_card'
 DISCHARGE_RECORD = 'discharge_record'
 
 # FTP config
-FTP_USERNAME = 'webscan'
+FTP_USERNAME = 'upload'
 FTP_PASSWORD = 'raspberry'
-FTP_URL = '192.168.15.17:21'
+FTP_URL = '192.168.15.17'
+FTP_PORT = 21
