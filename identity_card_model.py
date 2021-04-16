@@ -16,8 +16,8 @@ from helpers import load_label_map
 class CompletedModel(object):
     def __init__(self):
           self.text_detection_model = Detector(path_to_model='./models/identity_card/model.tflite',
-                                             path_to_labels='./models/identity_card/label_map.pbtxt',
-                                             nms_threshold=0.2, score_threshold=0.2)
+                                               path_to_labels='./models/identity_card/label_map.pbtxt',
+                                               nms_threshold=0.2, score_threshold=0.2)
     
 
     def get_corner_of_discharge_record(self, img):

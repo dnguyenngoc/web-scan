@@ -2,6 +2,44 @@ import numpy as np
 import cv2
 from PIL import Image
 from io import BytesIO
+from helpers import corner_utils, ocr_helpers
+
+
+def handle_detection(name_boxes, img_crop):
+    y_min, x_min, y_max, x_max = (name_boxes[0][0], name_boxes[0][1], name_boxes[0][2], name_boxes[0][3])
+    for item in name_boxes:
+        ymin = item[0]
+        xmin = item[1]
+        ymax = item[2]
+        xmax = item[3]
+        if ymin < y_min: y_min = ymin
+        if xmin < x_min: x_min = xmin
+        if ymax > y_max: y_max = ymax
+        if xmax > x_max: x_max = xmax
+    return img_crop[y_min:y_max, x_min-10:x_max+10]
+
+
+def crop_and_recog(boxes, image):
+    crop = []
+    if len(boxes) == 1:
+        ymin, xmin, ymax, xmax = boxes[0]
+        crop.append(image[ymin:ymax, xmin:xmax])
+    else:
+        for box in boxes:
+            ymin, xmin, ymax, xmax = box
+            crop.append(image[ymin:ymax, xmin:xmax])
+    return crop
+
+
+def crop_image(img):
+    img = np.asarray(img)
+    edges_image = corner_utils.edges_det(img)
+    edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
+    page_contour =  corner_utils.find_page_contours(edges_image)
+    page_contour =  corner_utils.four_corners_sort(page_contour)
+    crop_image = corner_utils.persp_transform(img, page_contour)
+    image = ocr_helpers.resize(crop_image)
+    return image
 
 
 def read_image_file(file) -> Image.Image:

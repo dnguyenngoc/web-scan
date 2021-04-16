@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from PIL import Image
+from settings import config
 
-SMALL_HEIGHT = 720
 
 
 def read_image_from_dir(path) -> Image.Image:
@@ -22,7 +22,7 @@ def implt(img, cmp=None, t=''):
     plt.show()
 
 
-def resize(img, height=SMALL_HEIGHT, always=False):
+def resize(img, height=config.SMALL_HEIGHT, always=False):
     """Resize image to given height."""
     if (img.shape[0] > height or always):
         rat = height / img.shape[0]
@@ -31,7 +31,7 @@ def resize(img, height=SMALL_HEIGHT, always=False):
     return img
 
 
-def ratio(img, height=SMALL_HEIGHT):
+def ratio(img, height=config.SMALL_HEIGHT):
     """Getting scale ratio."""
     return img.shape[0] / height
 

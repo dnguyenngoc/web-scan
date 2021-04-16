@@ -17,7 +17,7 @@ def read(db_session: Session, id: int) -> Document:
     return db_session.query(Document).filter(Document.id == id).first()
 
 
-def update(*, db_session: Session, id: int, update) -> Document:
+def update(db_session: Session, id: int, update) -> Document:
     update = db_session.query(Document).filter(Document.id == id).update(update, synchronize_session='evaluate')
     db_session.commit()
     return update

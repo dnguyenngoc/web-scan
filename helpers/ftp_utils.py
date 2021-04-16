@@ -1,27 +1,47 @@
-import ftplib
+from ftplib import FTP as FTPU
+import urllib.request as urllib2
+from PIL import Image
+import io
 
 
-class FTP:
-    def __init__(self, url, username, password, port):
+class FTP(object):
+    def __init__(self, url, username, password):
         self.username = username
         self.password = password
         self.url = url
-        self.port = port
         self.sess = self.connect()
-        
+       
     def connect(self):
-        self.sess = ftplib.FTP(self.url, self.username, self.password).login()
+        ftp = FTPU()
+        ftp.connect(self.url)
+        ftp.login(self.username, self.password) 
+        return ftp
     
-    def load_file(self, path):
-        file = open(path,'rb')     
-        res = self.sess.retrlines('RETR ' + path, self.sess.write)
-        file.close() 
-        return res
+    def list(self, path):
+        return self.sess.nlst(path)
+    
+    def read(self, path):
+        fh = urllib2.urlopen('ftp://{user}:{pw}@{host}/{path}'.format(
+            user = self.username, pw=self.password, host=self.url, path = path))
+        return fh.read()
+    
+    def move(self, source, destination):
+        self.sess.rename(source, destination)
         
-    def create_file(self, path, file):
-        self.sess.storbinary('STOR ' + path, file)
-        file.close()  
-    
+    def upload_np_image(self, np_image, path, file_type):
+        image = Image.fromarray(np_image.astype('uint8'))
+        temp = io.BytesIO()
+        image.save(temp, format=file_type)
+        temp.seek(0)
+        self.sess.storbinary('STOR ./{path}'.format(path=path), temp)
+
+    def chdir(self, dir): 
+        try:
+            self.sess.mkd(dir)
+        except:
+            pass
+
+
     def close(self):
         if self.sess != None:
             self.sess.quit()

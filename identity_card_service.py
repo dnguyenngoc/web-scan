@@ -2,22 +2,22 @@ import os
 os.chdir('./')
 import time
 import datetime
-from ftplib import FTP
+from helpers.ftp_utils import FTP
 from pprint import pprint
-import ftplib
 from settings import config
 import io
-import urllib.request as urllib2
 from identity_card_model import CompletedModel
 import numpy as np
-from helpers import corner_utils, ocr_helpers
+from helpers import image_utils
 from PIL import Image
 import cv2
+from database.db import db_session
+from database.repository_crud import document_crud, document_split_crud
+from database.entities import document_entity, document_split_entity
+import datetime
 
 
-ftp = FTP()
-ftp.connect(config.FTP_URL)
-ftp.login(config.FTP_USERNAME, config.FTP_PASSWORD)
+ftp = FTP(config.FTP_URL, config.FTP_USERNAME, config.FTP_PASSWORD)
 
 
 print('load model ...')
@@ -25,89 +25,161 @@ model = CompletedModel()
 print('model is loaded.')
 
 
-def list(path):
-    return ftp.nlst(path)
-
-
-def upload_np_image(np_image, path, file_type):
-    image = Image.fromarray(np_image.astype('uint8'))
-    temp = io.BytesIO()
-    image.save(temp, format=file_type)
-    temp.seek(0)
-    ftp.storbinary('STOR ./{path}'.format(path=path), temp)
-
-
-def read(path):
-    fh = urllib2.urlopen('ftp://{user}:{pw}@{host}/{path}'.format(user = config.FTP_USERNAME, pw=config.FTP_PASSWORD, host=config.FTP_URL, path = path))
-    return fh.read()
-
-
-def move(source, destination):
-    ftp.rename(source, destination)
-
-
-def crop_image(img):
-    img = np.asarray(img)
-    edges_image = corner_utils.edges_det(img)
-    edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
-    page_contour =  corner_utils.find_page_contours(edges_image)
-    page_contour =  corner_utils.four_corners_sort(page_contour)
-    crop_image = corner_utils.persp_transform(img, page_contour)
-    image = ocr_helpers.resize(crop_image)
-    image_end = Image.fromarray(np.uint8(image)).convert('RGB')
-    image_with_detections = image.copy()
-    return image
-
-
-def crop_and_recog(boxes, image):
-    crop = []
-    if len(boxes) == 1:
-        ymin, xmin, ymax, xmax = boxes[0]
-        crop.append(image[ymin:ymax, xmin:xmax])
-    else:
-        for box in boxes:
-            ymin, xmin, ymax, xmax = box
-            crop.append(image[ymin:ymax, xmin:xmax])
-    return crop
-
-
-def handle_detection(name_boxes, img_crop):
-    y_min, x_min, y_max, x_max = (name_boxes[0][0], name_boxes[0][1], name_boxes[0][2], name_boxes[0][3])
-    for item in name_boxes:
-        ymin = item[0]
-        xmin = item[1]
-        ymax = item[2]
-        xmax = item[3]
-        if ymin < y_min: y_min = ymin
-        if xmin < x_min: x_min = xmin
-        if ymax > y_max: y_max = ymax
-        if xmax > x_max: x_max = xmax
-    return img_crop[y_min:y_max, x_min-10:x_max+10]
-
-
-identity_card_import_dir = 'identity_card/import/'
-identity_card_export_dir = 'identity_card/export/'
-
 while True:
     print('start session ...')
-    imports = list(identity_card_import_dir)
+    
+    # Load list_file
+    imports = ftp.list(config.IDENTITY_CARD_IMPORT_DIR)
+
     for item in imports:
-        image_path = identity_card_import_dir + item
-        image = read(image_path)
+        image_path = config.IDENTITY_CARD_IMPORT_DIR + item
+        
+        ############################################################
+        # DB
+        ############################################################
+        document = document_crud.create(
+            db_session, 
+            document_entity.DocumentCreate(
+                name = item, 
+                type_id = 1, 
+                url = 'http://' + config.FTP_URL + '/' + image_path,
+                status_id = 1,
+                create_date = datetime.datetime.utcnow()
+            )
+        )
+        ############################################################
+        # DB
+        ############################################################
+        
+        image = ftp.read(image_path)
         image = np.array(Image.open(io.BytesIO(image))) 
-        img_crop = crop_image(image)
+        img_crop = image_utils.crop_image(image)
         im_height,im_width, _ = img_crop.shape
-        id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes, category_index = model.detect_text_cmnd(img_crop)
-        img_id_boxes = handle_detection(id_boxes, img_crop)
-        upload_np_image(img_id_boxes, identity_card_export_dir +'id_'+ item, 'JPEG')
-        img_name_boxes = handle_detection(name_boxes, img_crop)
-        upload_np_image(img_name_boxes, identity_card_export_dir +'name_'+ item, 'JPEG')
-        img_birth_boxes = handle_detection(birth_boxes, img_crop)
-        upload_np_image(img_birth_boxes, identity_card_export_dir +'birth_'+ item, 'JPEG')
-        img_add_boxes = handle_detection(add_boxes, img_crop)
-        upload_np_image(img_add_boxes, identity_card_export_dir +'add_'+ item, 'JPEG')
-        img_home_boxes = handle_detection(home_boxes, img_crop)
-        upload_np_image(img_home_boxes, identity_card_export_dir +'home_'+ item, 'JPEG')
-        move(image_path, identity_card_export_dir + item)
+        id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes, category_index \
+                                                                  = model.detect_text_cmnd(img_crop)
+        
+        now = datetime.datetime.utcnow()
+        if now.month <= 10:
+            month = '0' + str(now.month)
+        else:
+            month = str(now.month)
+            
+        if now.day <= 10:
+            day = '0' + str(now.day)
+        else:
+            day = str(now.day)
+ 
+        date_export_dir =  config.IDENTITY_CARD_EXPORT_DIR  + str(now.year) + '-' + month + '-' + day + '/'
+        image_export_dir = date_export_dir + str(document.id) + '/'
+        ftp.chdir(date_export_dir)
+        ftp.chdir(image_export_dir)
+        
+        # crop field
+        img_id_boxes = image_utils.handle_detection(id_boxes, img_crop)
+        ftp.upload_np_image(img_id_boxes, image_export_dir + 'id.jpg', 'JPEG')
+        
+        img_name_boxes = image_utils.handle_detection(name_boxes, img_crop)
+        ftp.upload_np_image(img_name_boxes, image_export_dir + 'name.jpg', 'JPEG')
+        
+        img_birth_boxes = image_utils.handle_detection(birth_boxes, img_crop)
+        ftp.upload_np_image(img_birth_boxes, image_export_dir + 'birth.jpg', 'JPEG')
+        
+        img_add_boxes = image_utils.handle_detection(add_boxes, img_crop)
+        ftp.upload_np_image(img_add_boxes, image_export_dir + 'add.jpg', 'JPEG')
+        
+        img_home_boxes = image_utils.handle_detection(home_boxes, img_crop)
+        ftp.upload_np_image(img_home_boxes, image_export_dir + 'home.jpg', 'JPEG')
+        
+        # Move image import to export
+        ftp.upload_np_image(img_crop, image_export_dir + 'crop.jpg', 'JPEG')
+        
+        ############################################################
+        # DB
+        ############################################################
+        document_split_crud.create(
+            db_session, 
+            document_split_entity.DocumentSplitCreate(
+                name = 'identity',
+                type_id = 1,
+                url = 'http://' + config.FTP_URL + '/' + image_export_dir + 'id.jpg',
+                document_id = document.id, 
+                create_date = datetime.datetime.utcnow()
+             )
+         )
+        document_split_crud.create(
+            db_session, 
+            document_split_entity.DocumentSplitCreate(
+                name = 'address',
+                type_id = 1,
+                url = 'http://' + config.FTP_URL + '/' + image_export_dir + 'add.jpg',
+                document_id = document.id, 
+                create_date = datetime.datetime.utcnow()
+             )
+         )
+        document_split_crud.create(
+            db_session, 
+            document_split_entity.DocumentSplitCreate(
+                name = 'full_name',
+                type_id = 1,
+                url = 'http://' + config.FTP_URL + '/' + image_export_dir + 'name.jpg',
+                document_id = document.id, 
+                create_date = datetime.datetime.utcnow()
+             )
+         )
+        document_split_crud.create(
+            db_session, 
+            document_split_entity.DocumentSplitCreate(
+                name = 'birth_day',
+                type_id = 1,
+                url = 'http://' + config.FTP_URL + '/' + image_export_dir + 'birth.jpg',
+                document_id = document.id, 
+                create_date = datetime.datetime.utcnow()
+             )
+         )
+        document_split_crud.create(
+            db_session, 
+            document_split_entity.DocumentSplitCreate(
+                name = 'home_town',
+                type_id = 1,
+                url = 'http://' + config.FTP_URL + '/' + image_export_dir + 'home.jpg',
+                document_id = document.id, 
+                create_date = datetime.datetime.utcnow()
+             )
+         )
+        document_split_crud.create(
+            db_session, 
+            document_split_entity.DocumentSplitCreate(
+                name = 'crop_image',
+                type_id = 1,
+                url = 'http://' + config.FTP_URL + '/' + image_export_dir + 'crop.jpg',
+                document_id = document.id, 
+                create_date = datetime.datetime.utcnow()
+             )
+         )
+        
+        ###########################################################
+        # DB
+        ###########################################################
+        ftp.move(image_path, image_export_dir + 'origin.jpg')
+        
+        
+        ###########################################################
+        # DB
+        ###########################################################
+        document_crud.update(
+            db_session,
+            document.id,  
+            {
+                'url': 'http://' + config.FTP_URL + '/' + image_export_dir + 'origin.jpg',
+                'update_date': datetime.datetime.utcnow(),
+                'status_id': 2,
+            }
+        )
+        ############################################################
+        # DB
+        ############################################################
+    break
     print('sleep 100 second ...') 
-    time.sleep(100)
+    time.sleep(10)
+
+    

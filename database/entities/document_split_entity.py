@@ -5,24 +5,28 @@ from datetime import datetime
 from decimal import Decimal
 
 # Shared properties
-class DocumentBase(BaseModel):
+class DocumentSplitBase(BaseModel):
     name: Optional[str]
+    value: Optional[str] = None
+    is_extracted: Optional[str] = False
     type_id: Optional[int]
     url: Optional[str]
-    status_id: Optional[int]
+    document_id: Optional[int]
     create_date: Optional[datetime]
-    export_date: Optional[datetime] = None
+    update_date: Optional[datetime] = None
     class Config:
         orm_mode = True
 
-class DocumentInDB(DocumentBase):
+# Data on db
+class DocumentSplitInDB(DocumentSplitBase):
     id: Optional[int]
 
-# Create Document info
-class DocumentCreate(BaseModel):
+# Create DocumentSplit info
+class DocumentSplitCreate(BaseModel):
     name: Optional[str]
+    value: Optional[str] = None
+    is_extracted: Optional[str] = False
     type_id: Optional[int]
     url: Optional[str]
-    status_id: Optional[int]
+    document_id: Optional[int]
     create_date: Optional[datetime]
-
