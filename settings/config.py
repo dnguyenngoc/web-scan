@@ -2,7 +2,7 @@ SMALL_HEIGHT = 720
 
 # DATABASE
 # SQLALCHEMY_DATABASE_URL = "sqlite:///./database/web-scan.db"
-SQLALCHEMY_DATABASE_URL = "postgresql://webscan:1q2w3e4r@localhost:5432/webscan"
+SQLALCHEMY_DATABASE_URL = "postgresql://webscan:1q2w3e4r@192.168.15.18:5432/webscan"
 
 
 # SERVICE TYPE
