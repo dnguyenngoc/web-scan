@@ -1,7 +1,6 @@
 SMALL_HEIGHT = 720
 
 # DATABASE
-# SQLALCHEMY_DATABASE_URL = "sqlite:///./database/web-scan.db"
 SQLALCHEMY_DATABASE_URL = "postgresql://webscan:1q2w3e4r@192.168.15.18:5432/webscan"
 
 
@@ -14,9 +13,23 @@ DISCHARGE_RECORD = 'discharge_record'
 IDENTITY_CARD_IMPORT_DIR = 'identity_card/import/'
 IDENTITY_CARD_EXPORT_DIR = 'identity_card/export/'
 
+# STATUS DOC TYPE
+IMPORT_TYPE_NAME = 'import'
+EXPORT_TYPE_NAME = 'export'
+BAD_TYPE_NAME = 'bad'
+TRANSFORM_TYPE_NAME = 'transform'
 
 # FTP CONFIG
 FTP_USERNAME = 'upload'
 FTP_PASSWORD = 'raspberry'
-FTP_URL = '10.1.33.76'
+FTP_URL = '192.168.15.17'
 FTP_PORT = 21
+
+
+# BE SERVICE
+BE_HOST = '192.168.15.19'
+BE_PORT = 8081
+
+# FE SERVICE
+FE_HOST = '192.168.15.19'
+FE_PORT = 8080

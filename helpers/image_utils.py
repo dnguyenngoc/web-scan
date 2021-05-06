@@ -3,6 +3,15 @@ import cv2
 from PIL import Image
 from io import BytesIO
 from helpers import corner_utils, ocr_helpers
+import requests
+
+
+def read_bytes_image_from_url(url):
+    response = requests.get(url)
+    image_bytes = BytesIO(response.content)
+    #img = Image.open(image_bytes)
+    return image_bytes.read()
+
 
 
 def handle_detection(name_boxes, img_crop):
