@@ -5,13 +5,13 @@ SQLALCHEMY_DATABASE_URL = "postgresql://webscan:1q2w3e4r@192.168.15.18:5432/webs
 
 
 # SERVICE TYPE
-IDENTITY_CARD = 'identity_card'
-DISCHARGE_RECORD = 'discharge_record'
+IDENTITY_CARD = 'identity-card'
+DISCHARGE_RECORD = 'discharge-record'
 
 
 # IDENTITY_CARD SERVICE CONFIG
-IDENTITY_CARD_IMPORT_DIR = 'identity_card/import/'
-IDENTITY_CARD_EXPORT_DIR = 'identity_card/export/'
+IDENTITY_CARD_IMPORT_DIR = 'identity-card/import/'
+IDENTITY_CARD_EXPORT_DIR = 'identity-card/export/'
 
 # STATUS DOC TYPE
 IMPORT_TYPE_NAME = 'import'

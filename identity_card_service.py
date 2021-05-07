@@ -96,4 +96,4 @@ while True:
            )
         document_crud.update(db_session, item.id, {'status_id': 2, 'update_date': datetime.datetime.utcnow()})
     ftp.close()
-    time.sleep(10)
+    time.sleep(120)
