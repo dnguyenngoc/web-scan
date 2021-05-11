@@ -37,7 +37,11 @@ def make_string_now_time():
 
 def upload_normal(name, document_id,field_name, image):
     fields = {'name': name,'document_id': document_id,}
-    files =  {'image': (name, bytes(image), 'image/png')}
+    byte_io = io.BytesIO()
+    image.save(byte_io, format="PNG")
+    image_buffer = byte_io.getvalue()
+    byte_io.close()
+    files =  {'image': (name, image_buffer, 'image/png')}
     r = requests.post(
         'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
         files=files,
@@ -49,7 +53,11 @@ def upload_normal(name, document_id,field_name, image):
 
 def upload_crop(name, document_id, field_name, image):
     fields = {'name': name,'document_id': document_id,}
-    files =  {'image': (name, bytes(image), 'image/png')}
+    byte_io = io.BytesIO()
+    image.save(byte_io, format="PNG")
+    image_buffer = byte_io.getvalue()
+    byte_io.close()
+    files =  {'image': (name, image_buffer, 'image/png')}
     r = requests.post(
         'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
         files=files,
