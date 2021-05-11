@@ -46,6 +46,7 @@ def job():
         if item['url'] == None:
             continue
         try:
+            print('[image_url] url image will load: ', item['url'])
             image = image_utils.read_bytes_image_from_url(item['url'])
             image = np.array(Image.open(io.BytesIO(image)))
             img_crop = image_utils.crop_image(image)
@@ -58,7 +59,13 @@ def job():
             img_add_boxes = image_utils.handle_detection(add_boxes, img_crop)
             img_home_boxes = image_utils.handle_detection(home_boxes, img_crop)
         except Exception as e:
-            print('[error] when extract field with: ',e)
+            print('[error] document is bad: ',e)
+            data = {'type_doc': 'identity-card', 'status_code': 500, 'document_id': item['id']}
+            r = requests.put(
+                'http://{host}:{port}/api/v1/ml-split/update-status'.format(host=config.BE_HOST, port = config.BE_PORT),
+                data = data,
+            )
+            print(r.status_code)
             continue
 
         list_fields = ['address', 'id', 'home_town', 'name', 'birthday', 'crop_image']
