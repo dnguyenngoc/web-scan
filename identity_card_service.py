@@ -67,8 +67,12 @@ def upload_crop(name, document_id, field_name, image):
         verify=False
     )
     return r
-    
-    
+
+
+def upload_none(document_id, name, field_name):
+    pass
+
+
 def job():
     print('start')
     res = requests.get('http://{host}:{port}/api/v1/ml-split/identity-card/100'.format(host=config.BE_HOST, port = config.BE_PORT))
@@ -87,12 +91,14 @@ def job():
             im_height, im_width, _ = img_crop.shape
             name_doc = item['name'].split('.')[0]
             id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes, category_index = model.detect_text_cmnd(img_crop)
-            img_id_boxes = image_utils.handle_detection(id_boxes, img_crop)
-            img_name_boxes = image_utils.handle_detection(name_boxes, img_crop)
-            img_birth_boxes = image_utils.handle_detection(birth_boxes, img_crop)
-            img_add_boxes = image_utils.handle_detection(add_boxes, img_crop)
-            img_home_boxes = image_utils.handle_detection(home_boxes, img_crop)
+            img_id_boxes, img_name_boxes, img_birth_boxes, img_add_boxes, img_home_boxes = (None, None, None, None, None)
+            if id_boxes  != None: img_id_boxes = image_utils.handle_detection(id_boxes, img_crop)
+            if name_boxes != None: img_name_boxes = image_utils.handle_detection(name_boxes, img_crop)
+            if birth_boxes != None: img_birth_boxes = image_utils.handle_detection(birth_boxes, img_crop)
+            if add_boxes != None: img_add_boxes = image_utils.handle_detection(add_boxes, img_crop)
+            if home_boxes != None: img_home_boxes = image_utils.handle_detection(home_boxes, img_crop)
         except Exception as e:
+            print('[error]  with item: ', item)
             print('[error] when extract field with: ',e)
             continue
 
@@ -103,14 +109,16 @@ def job():
             image_now = list_image_fields[i]
             name = item['name'].split('.')[0] + '_' + field_name + '.png'
             document_id = item['id']
-            print('[run] upload with field: ', field_name)
-            r = upload_normal(name, document_id, field_name, image_now)
-            print(r.status_code)
+            if image_now == None:
+                upload_none(document_id, name, field_name)
+            else:
+                upload_normal(name, document_id, field_name, image_now)
         print('[run] upload crop_image > done')
         r = upload_crop(name, document_id, field_name, img_crop)
         print(r.status_code)
-        
-        
+
+
+
 schedule.every(1).seconds.do(job)
 while True:
     schedule.run_pending()
