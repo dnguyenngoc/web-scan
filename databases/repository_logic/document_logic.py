@@ -3,7 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session, joinedload, raiseload
-from database.models import Document, Status
+from databases.models import Document, Status
 from datetime import datetime
 # from sqlalchemy import desc
 from sqlalchemy import distinct
