@@ -250,3 +250,14 @@ def sort_each_category(category_text_boxes):
         merged_text_boxes = line1_text_boxes
 
     return merged_text_boxes
+
+
+
+
+
+
+
+
+
+
+
