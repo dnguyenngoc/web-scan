@@ -105,7 +105,7 @@ def job():
             print('[run] upload with field: ', field_name)
             r = upload_normal(name, document_id, field_name, image_now)
             print(r.status_code)
-        pritn('[run] upload crop_image > done')
+        print('[run] upload crop_image > done')
         r = upload_crop(name, document_id, field_name, img_crop)
         print(r.status_code)
         
