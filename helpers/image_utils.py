@@ -12,7 +12,9 @@ def read_bytes_image_from_url(url):
     #img = Image.open(image_bytes)
     return image_bytes.read()
 
-
+def read_image_from_url(url):
+    im = Image.open(requests.get(url, stream=True).raw)
+    return im
 
 def handle_detection(name_boxes, img_crop):
     y_min, x_min, y_max, x_max = (name_boxes[0][0], name_boxes[0][1], name_boxes[0][2], name_boxes[0][3])
@@ -41,16 +43,13 @@ def crop_and_recog(boxes, image):
 
 
 def crop_image(img):
-    try:
-        img = np.asarray(img)
-        edges_image = corner_utils.edges_det(img)
-        edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
-        page_contour =  corner_utils.find_page_contours(edges_image)
-        page_contour =  corner_utils.four_corners_sort(page_contour)
-        crop_image = corner_utils.persp_transform(img, page_contour)
-        image = ocr_helpers.resize(crop_image)
-    except:
-        image =  ocr_helpers.resize(img)
+    img = np.asarray(img)
+    edges_image = corner_utils.edges_det(img)
+    edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
+    page_contour =  corner_utils.find_page_contours(edges_image)
+    page_contour =  corner_utils.four_corners_sort(page_contour)
+    crop_image = corner_utils.persp_transform(img, page_contour)
+    image = ocr_helpers.resize(crop_image)
     return image
 
 
@@ -215,14 +214,12 @@ def sort_text(detection_boxes, detection_labels):
     birth_boxes = detection_boxes[detection_labels == 3]
     home_boxes = detection_boxes[detection_labels == 4]
     add_boxes = detection_boxes[detection_labels == 5]
-
     # arrange boxes
     id_boxes = sort_each_category(id_boxes)
     name_boxes = sort_each_category(name_boxes)
     birth_boxes = sort_each_category(birth_boxes)
     home_boxes = sort_each_category(home_boxes)
     add_boxes = sort_each_category(add_boxes)
-
     return id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes
 
 

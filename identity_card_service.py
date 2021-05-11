@@ -14,6 +14,7 @@ import cv2
 import datetime
 import requests
 import schedule
+import tensorflow.compat.v2 as tf
 
 
 print('load model ...')
@@ -43,12 +44,12 @@ def make_bytes_from_numpy_image(np_image, file_type):
     return jpg_buffer
 
 
-def upload_normal(name, document_id,field_name, image):
-    fields = {'name': name,'document_id': document_id,}
+def upload_normal(name, document_id, field_name, image):
+    fields = {'name': name,'document_id': document_id, 'field_name': field_name}
     image_buffer = make_bytes_from_numpy_image(image, 'PNG')
     files =  {'image': (name, image_buffer, 'image/png')}
     r = requests.post(
-        'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
+        'http://{host}:{port}/api/v1/ftp/image/split'.format(host=config.BE_HOST, port = config.BE_PORT),
         files=files,
         data=fields,
         verify=False
@@ -68,6 +69,14 @@ def upload_crop(name, document_id, field_name, image):
     )
     return r
 
+def bad_image(document_id, type_doc, status_code):
+    data = {'document_id': document_id, 'type_doc': type_doc, 'status_code': status_code}
+    r = requests.put(
+        'http://{host}:{port}/api/v1/ml-split/bad'.format(host=config.BE_HOST, port = config.BE_PORT),
+         data=data,
+         verify=False
+    )
+    return r
 
 def upload_none(document_id, name, field_name):
     pass
@@ -85,8 +94,8 @@ def job():
         if item['url'] == None:
             continue
         try:
-            image = image_utils.read_bytes_image_from_url(item['url'])
-            image = np.array(Image.open(io.BytesIO(image)))
+            image = image_utils.read_image_from_url(item['url'])
+            image = np.array(image)
             img_crop = image_utils.crop_image(image)
             im_height, im_width, _ = img_crop.shape
             name_doc = item['name'].split('.')[0]
@@ -95,26 +104,28 @@ def job():
             if id_boxes  != None: img_id_boxes = image_utils.handle_detection(id_boxes, img_crop)
             if name_boxes != None: img_name_boxes = image_utils.handle_detection(name_boxes, img_crop)
             if birth_boxes != None: img_birth_boxes = image_utils.handle_detection(birth_boxes, img_crop)
-            if add_boxes != None: img_add_boxes = image_utils.handle_detection(add_boxes, img_crop)
             if home_boxes != None: img_home_boxes = image_utils.handle_detection(home_boxes, img_crop)
+            if add_boxes != None: img_add_boxes = image_utils.handle_detection(add_boxes, img_crop)
+                
         except Exception as e:
             print('[error]  with item: ', item)
             print('[error] when extract field with: ',e)
+            r = bad_image(item['id'], 'identity-card', 500)
+            print(r.json())
             continue
 
         list_fields = ['id',  'name', 'birthday', 'home_town', 'address']
         list_image_fields = [img_id_boxes, img_name_boxes, img_birth_boxes, img_home_boxes, img_add_boxes]
         for i in range(len(list_fields)):
             field_name = list_fields[i]
-            image_now = list_image_fields[i]
             name = item['name'].split('.')[0] + '_' + field_name + '.png'
             document_id = item['id']
-            if image_now == None:
-                upload_none(document_id, name, field_name)
-            else:
-                upload_normal(name, document_id, field_name, image_now)
+            print('[run] upload field: ', field_name)
+            image_now = list_image_fields[i]
+            r = upload_normal(name, document_id, field_name, image_now)
+            print(r.status_code)
         print('[run] upload crop_image > done')
-        r = upload_crop(name, document_id, field_name, img_crop)
+        r = upload_crop(item['name'].split('.')[0] + '_' + 'crop_image.png',  item['id'], 'crop_image', img_crop)
         print(r.status_code)
 
 

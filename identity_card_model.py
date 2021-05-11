@@ -35,8 +35,8 @@ class CompletedModel(object):
         id_boxes = None
         name_boxes = None
         birth_boxes = None
-        add_boxes = None
         home_boxes = None
+        add_boxes = None
         detection_boxes, detection_classes, category_index = self.text_detection_model.predict(image)
         id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes = sort_text(detection_boxes, detection_classes)
         return id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes, category_index
