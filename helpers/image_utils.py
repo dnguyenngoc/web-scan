@@ -41,13 +41,16 @@ def crop_and_recog(boxes, image):
 
 
 def crop_image(img):
-    img = np.asarray(img)
-    edges_image = corner_utils.edges_det(img)
-    edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
-    page_contour =  corner_utils.find_page_contours(edges_image)
-    page_contour =  corner_utils.four_corners_sort(page_contour)
-    crop_image = corner_utils.persp_transform(img, page_contour)
-    image = ocr_helpers.resize(crop_image)
+    try:
+        img = np.asarray(img)
+        edges_image = corner_utils.edges_det(img)
+        edges_image = cv2.morphologyEx(edges_image, cv2.MORPH_CLOSE, np.ones((5, 11)))
+        page_contour =  corner_utils.find_page_contours(edges_image)
+        page_contour =  corner_utils.four_corners_sort(page_contour)
+        crop_image = corner_utils.persp_transform(img, page_contour)
+        image = ocr_helpers.resize(crop_image)
+    except:
+        image =  ocr_helpers.resize(img)
     return image
 
 

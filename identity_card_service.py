@@ -34,6 +34,31 @@ def make_string_now_time():
         return str(now.year) + '-' + month + '-' + day
 
 
+
+def upload_normal(name, document_id,field_name, image):
+    fields = {'name': name,'document_id': document_id,}
+    files =  {'image': (name, bytes(image), 'image/png')}
+    r = requests.post(
+        'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
+        files=files,
+        data=fields,
+        verify=False
+    )
+    return r
+
+
+def upload_crop(name, document_id, field_name, image):
+    fields = {'name': name,'document_id': document_id,}
+    files =  {'image': (name, bytes(image), 'image/png')}
+    r = requests.post(
+        'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
+        files=files,
+        data=fields,
+        verify=False
+    )
+    return r
+    
+    
 def job():
     print('start')
     res = requests.get('http://{host}:{port}/api/v1/ml-split/identity-card/100'.format(host=config.BE_HOST, port = config.BE_PORT))
@@ -68,39 +93,21 @@ def job():
             print(r.status_code)
             continue
 
-        list_fields = ['address', 'id', 'home_town', 'name', 'birthday', 'crop_image']
-        len_list_fields = len(list_fields)
-        for k in range(len_list_fields):
-            field_name = list_fields[k]
+        list_fields = ['id',  'name', 'birthday', 'home_town', 'address']
+        list_image_fields = [id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes]
+        for i in range(len(list_fields)):
+            field_name = list_fields[i]
+            image_now = list_image_fields[i]
+            name = item['name'].split('.')[0] + '_' + field_name + '.png'
+            document_id = item['id']
             print('[run] upload with field: ', field_name)
-            if k == len_list_fields - 1:
-                fields = {
-                    'name': item['name'].split('.')[0] + '_' + field_name + '.png',
-                    'document_id': item['id'],
-                }
-                files =  {'image': (item['name'].split('.')[0] + '_' + field_name + '.png', image, 'image/png')}
-                r = requests.post(
-                    'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
-                    files=files,
-                    data=fields,
-                    verify=False
-                )
-                print(r.status_code)
-                print(r.json())
-                break
-            fields = {
-                'name': item['name'].split('.')[0] + '_' + field_name + '.png',
-                'document_id': item['id'],
-                'field_name': field_name
-            }
-            files =  {'image': (item['name'].split('.')[0] + '_' + field_name + '.png', image, 'image/png')}
-            r = requests.post(
-                'http://{host}:{port}/api/v1/ftp/image/split'.format(host=config.BE_HOST, port = config.BE_PORT),
-                files=files,
-                data=fields,
-                verify=False
-            )
+            r = upload_normal(name, document_id, field_name, image_now)
             print(r.status_code)
+        pritn('[run] upload crop_image > done')
+        r = upload_crop(name, document_id, field_name, img_crop)
+        print(r.status_code)
+        
+        
 schedule.every(1).seconds.do(job)
 while True:
     schedule.run_pending()
