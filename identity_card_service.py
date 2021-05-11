@@ -38,8 +38,9 @@ def make_bytes_from_numpy_image(np_image, file_type):
     image = Image.fromarray(np_image.astype('uint8'))
     temp = io.BytesIO()
     image.save(temp, format=file_type)
-    temp.seek(0)
-    return temp
+    jpg_buffer = temp.getvalue()
+    temp.close()
+    return jpg_buffer
 
 
 def upload_normal(name, document_id,field_name, image):
