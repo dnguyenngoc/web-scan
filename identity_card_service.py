@@ -96,7 +96,7 @@ def job():
             continue
 
         list_fields = ['id',  'name', 'birthday', 'home_town', 'address']
-        list_image_fields = [id_boxes, name_boxes, birth_boxes, home_boxes, add_boxes]
+        list_image_fields = [img_id_boxes, img_name_boxes, img_birth_boxes, img_home_boxes, img_add_boxes]
         for i in range(len(list_fields)):
             field_name = list_fields[i]
             image_now = list_image_fields[i]
