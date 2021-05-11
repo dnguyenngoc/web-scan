@@ -32,15 +32,19 @@ def make_string_now_time():
         else:
             day = str(now.day)
         return str(now.year) + '-' + month + '-' + day
+    
 
+def make_bytes_from_numpy_image(np_image, file_type):
+    image = Image.fromarray(np_image.astype('uint8'))
+    temp = io.BytesIO()
+    image.save(temp, format=file_type)
+    temp.seek(0)
+    return temp
 
 
 def upload_normal(name, document_id,field_name, image):
     fields = {'name': name,'document_id': document_id,}
-    byte_io = io.BytesIO()
-    image.save(byte_io, format="PNG")
-    image_buffer = byte_io.getvalue()
-    byte_io.close()
+    image_buffer = make_bytes_from_numpy_image(image, 'PNG')
     files =  {'image': (name, image_buffer, 'image/png')}
     r = requests.post(
         'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
@@ -53,10 +57,7 @@ def upload_normal(name, document_id,field_name, image):
 
 def upload_crop(name, document_id, field_name, image):
     fields = {'name': name,'document_id': document_id,}
-    byte_io = io.BytesIO()
-    image.save(byte_io, format="PNG")
-    image_buffer = byte_io.getvalue()
-    byte_io.close()
+    image_buffer = make_bytes_from_numpy_image(image, 'PNG')
     files =  {'image': (name, image_buffer, 'image/png')}
     r = requests.post(
         'http://{host}:{port}/api/v1/ftp/image/document-crop'.format(host=config.BE_HOST, port = config.BE_PORT),
