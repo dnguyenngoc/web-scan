@@ -1,3 +1,9 @@
+import os
+
+
+ENVIRONMENT = os.getenv('ENVIRONMENT')
+
+
 SMALL_HEIGHT = 720
 
 # DATABASE
@@ -19,17 +25,25 @@ EXPORT_TYPE_NAME = 'export'
 BAD_TYPE_NAME = 'bad'
 TRANSFORM_TYPE_NAME = 'transform'
 
-# FTP CONFIG
-FTP_USERNAME = 'upload'
-FTP_PASSWORD = 'raspberry'
-FTP_URL = '192.168.15.17'
-FTP_PORT = 21
 
-
-# BE SERVICE
-BE_HOST = '161.117.87.31'
 BE_PORT = 8081
-
-# FE SERVICE
-FE_HOST = '161.117.87.31'
 FE_PORT = 8080
+FTP_PORT = 21
+if ENVIRONMENT == 'staging':
+    # FTP CONFIG
+    FTP_USERNAME = 'pot'
+    FTP_PASSWORD = 'D@123123'
+    FTP_URL = '161.117.87.31'
+    # BE SERVICE
+    BE_HOST = '161.117.87.31'
+    # FE SERVICE
+    FE_HOST = '161.117.87.31'
+elif ENVIRONMENT == 'production':
+    # FTP CONFIG
+    FTP_USERNAME = 'upload'
+    FTP_PASSWORD = 'raspberry'
+    FTP_URL = '192.168.15.17'
+    # BE SERVICE
+    BE_HOST = '192.168.15.19'
+    # FE SERVICE
+    FE_HOST = '192.168.15.19'
